@@ -1,1 +1,91 @@
+% % Sistemas de Control II -FCEFyN-UNC 
+% Docente: Dr. Ing. Pucheta, Julian
+% Alumno: Morales Robles Matias Lucas
+% Actividad Práctica N1 - Caso de estudio 1 
+% Item 1  
+%%
+clear all; close all; clc;
+%%
+% Parámetros de diseño
+R = 220; L = 500e-3; Cap = 2.2e-6; vin = 12;
 
+% Espacio de estados
+A=[-R/L -1/L; 1/Cap 0];   % matriz de estados
+B=[1/L; 0];               % matriz de entrada
+C=[R 0];                  % matriz de salida
+D=[0];                    % matriz de transmision directa
+%%
+% Obtención de FT a partir del espacio de estados para el estudio del
+% comportamiento (dinámica del sistema)
+
+% Cálculo del numerador y denominador de FT a partir de las ecs. de estado
+[numG, denG] = ss2tf(A,B,C,D);
+% Función de transferencia del sistema
+G = tf(numG, denG);
+% Polos de la FT
+poles = roots(denG);
+polo1 = poles(1);
+polo2 = poles(2);
+% Tamaño de paso y tiempo de simulación
+tR   = log(0.95)/real(poles(1));    % dinámica rápida (para este caso iguales dinámicas)
+tint = tR/100;                 % tiempo de integración (10 veces menor)
+tsim = 30e-3;                 % no se escoje en función de la dinámica 
+                              % lenta del sistema dado que el t_est << que 
+                              % el tiempo de cambio de la entrada
+puntos = tsim/tint;
+t      = linspace(0, tsim, puntos);
+u      = linspace(0, 0, puntos);    % vector inicial de entrada (todos valores nulos)
+
+%Debo establecer el punto de operacion de la corriente y la tension:
+Il(1)=0;
+Vc(1)=0;
+x = [ Il(1)   Vc(1) ]'; %Aca defino las condiciones iniciales
+y(1)= 0;
+Xop=[0  0]'; % punto de operacion, en este caso es el origen
+
+%%
+% flag para controlar switcheo de la entrada 
+swTime = 0;     
+z      = size(t);
+z      = z(2)/3;
+
+for i = 1: puntos - 1
+ swTime = swTime + 1;
+ if (swTime >= z)
+     swTime = 0;
+     vin = vin*(-1);
+ end
+ u(i) = vin;
+  %Ahora planteo las variables de estado del sistema lineal
+    xp=A*(x-Xop)+B*u(i);
+    x=x+xp*tint;
+    Y=C*x;
+    y(i+1)=Y(1);
+    Il(i+1)=x(1);
+    Vc(i+1)=x(2);
+end
+%%
+% Gráficas
+
+% Gráfico de Il, Vc, Vin y salida
+figure(1)
+
+subplot(4,1,1)
+plot(t, Il, 'b'); 
+title('Corriente, i'); 
+grid on;
+
+subplot(4,1,2)
+plot(t, Vc, 'r'); 
+title('Tensión en el Capacitor, v_c'); 
+grid on;
+
+subplot(4,1,3)
+plot(t, u, 'm'); 
+title('Tensión de Entrada, u'); 
+grid on;
+
+subplot(4,1,4)
+plot(t, y, 'm'); 
+title('Tensión de Salida, v_r'); 
+grid on;
