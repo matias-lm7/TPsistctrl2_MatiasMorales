@@ -1,0 +1,120 @@
+% Sistemas de Control II -FCEFyN-UNC 
+% Docente: Dr. Ing. Pucheta, Julian
+% Alumno: Morales Robles Matias Lucas
+% Actividad Práctica N1 - Caso de estudio 1
+%   Inciso 2  
+%   En el archivo Curvas_Medidas_RLC_2025.xls (datos en la hoja 1 y etiquetas en la hoja
+%   2) están las series de datos que sirven para deducir los valores de R, L y C del circuito. Emplear
+%   el método de la respuesta al escalón, tomando como salida la tensión en
+%   el capacitor.
+%
+%   Inciso 3
+%   Una vez determinados los parámetros R, L y C, emplear la serie de corriente desde 
+%   0.05seg en adelante para validar el resultado superponiendo las gráficas.
+
+
+
+clear all; close all; clc; 
+
+% Lectura de datos 
+values   = xlsread('Curvas_Medidas_RLC_2025.xls'); 
+time     = values(1:end,1);
+iSignal  = values(1:end,2);
+vcSignal = values(1:end,3);
+uSignal  = values(1:end,4);
+
+% Gráficas de datos importados
+% 1) Tensión en el capacitor
+figure(1)
+subplot(3,1,1);
+plot(time,vcSignal, 'b');title('Tension Capacitor , V_t');grid on;hold on; 
+% 2) Corriente en el circuito
+subplot(3,1,2);
+plot(time, iSignal, 'b');title('Corriente , I_t');grid on;hold on;
+% 3) Tensión de entrada
+subplot(3,1,3);
+plot(time, uSignal, 'b');title('Tensión de entrada , U_t');grid on;hold on;
+
+% Definición de señal para verificación del método
+t   = linspace(0,0.2,2000);
+u   = linspace(0,0,2000);
+vin = 12;
+ii  = 0;
+%Esto sirve para generar una entrada que vaya cambiando con el tiempo,
+%comienza en 0V, luego 12V y termina en -12V 
+for i = 1:1999
+    if i < 100
+        u(i) = 0;
+    elseif i >= 100 && i <= 500
+        u(i) = vin;
+
+    elseif i > 500 && i<=1000
+        u(i) = -vin;
+    elseif i > 1000 && i <= 1500
+        u(i) = vin;
+    else
+        u(i) = -vin;
+    end
+end
+%figure(4)
+%plot(t,u, 'm');title('Tensión de Entrada, u_t');grid on
+% METODO DE CHEN
+% G(s) = Vc(s)/U(s)
+
+% Elección de las tres muestras para aplicar el método, teniendo en cuenta
+% que las mismas deben tomarse sobre el transitorio de la señal y siguiendo
+% las condiciones del método (ver artículo)
+
+% 1) Elección de valores sobre el plot de Vc
+t1_v = values(1050,1); y1_v = values(1050,3); 
+t2_v = values(1150,1); y2_v = values(1150,3);
+t3_v = values(1250,1); y3_v = values(1250,3);
+
+figure(3)
+plot([t1_v t2_v t3_v],[y1_v,y2_v,y3_v],'+');hold on;
+
+% 2) Cálculo de ganancia en estado estacionario
+% Se obtienen desde la gráfica ploteada con los datos del excel una vez que
+% la respuesta del sistema se estabiliza
+K_v = values(1940,3)/vin; 
+
+% 3) Normalización de valores
+% Se dividen los valores obtenidos del gráfico por el valor de la entrada
+% dado que con el método se busca la respuesta del sistema a una entrada
+% escalón unitario
+y1_v = y1_v/vin;
+y2_v = y2_v/vin; 
+y3_v = y3_v/vin;
+
+% 4) Aplicación del método
+% A) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3
+% puntos tomados en el inciso 1
+k1_v = (y1_v/K_v) - 1;   
+k2_v = (y2_v/K_v) - 1;   
+k3_v = (y3_v/K_v) - 1;
+
+% B) Se despejan los valores de alfa1, alfa2 y beta
+b_v     = 4*(k1_v^3)*k3_v - 3*(k1_v^2)*(k2_v^2) - 4*(k2_v^3) + (k3_v^2) + 6*k1_v*k2_v*k3_v; %Utilizando ecuacion 23 de Chen
+alfa1_v = (k1_v*k2_v + k3_v - sqrt(b_v))/(2*(k1_v^2 + k2_v)); %Utilizando ecuacion 21 de Chen
+alfa2_v = (k1_v*k2_v + k3_v + sqrt(b_v))/(2*(k1_v^2 + k2_v)); %Utilizando ecuacion 22 de Chen
+beta_v  = (k1_v+alfa2_v)/(alfa1_v-alfa2_v);                   %Utilizando ecuacion 24 de Chen
+
+% C) Cálculo de las constantes de tiempo de la FT
+T1_v = -(t1_v - 0.01)/log(alfa1_v);   %Ecuacion de Chen 25          
+T2_v = -(t1_v - 0.01)/log(alfa2_v);   %Ecuacion de Chen 25       
+T3_v =(beta_v*(T1_v - T2_v)) + T1_v;  %Ecuacion de Chen 25 
+
+% D) Definición de la función de transferencia obtenida con el método
+G_v = tf(K_v*[T3_v 1],conv([T1_v 1],[T2_v 1]));
+polos=pole(G_v);
+polo1=polos(1);
+polo2=polos(2);
+
+% E) Gráfica de los resultado obtenidos
+% Se compara la señal dada por los datos de la hoja de excel con la
+% salida del sistema al hacer uso de la FT obtenida con el método de Chen
+[y_G_v,t_G_v] = lsim(G_v,u,t);
+figure(4)
+plot(time,vcSignal, 'k' ); grid on; hold on;
+plot(t_G_v,y_G_v,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabal de datos');
+legend({'Vc_t de excel','Vc_t método de Chen'},'Location','northeast')
