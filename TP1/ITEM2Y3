@@ -56,8 +56,8 @@ for i = 1:1999
         u(i) = -vin;
     end
 end
-%figure(4)
-%plot(t,u, 'm');title('Tensión de Entrada, u_t');grid on
+figure(2)
+plot(t,u, 'm');title('Tensión de Entrada, u_t');grid on
 % METODO DE CHEN
 % G(s) = Vc(s)/U(s)
 
