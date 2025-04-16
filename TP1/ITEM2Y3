@@ -174,5 +174,5 @@ G_i = tf(K_i*[T3_i 1],conv([T1_i 1],[T2_i 1]));
 [y_G_i,t_G_i] = lsim(G_i,u,t);
 figure(6)
 plot(time, iSignal, 'k'); grid on; hold on;
-plot(t_G_i,y_G_i,'m'); title('Respuesta al sistema aplicando M. de Chen vs. Señal graficada de la tabal de datos');
+plot(t_G_i,y_G_i,'m'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabal de datos');
 legend({'I_t de excel','I_t método de Chen'},'Location','northeast')
