@@ -40,24 +40,6 @@ t   = linspace(0,0.2,2000);
 u   = linspace(0,0,2000);
 vin = 12;
 ii  = 0;
-%Esto sirve para generar una entrada que vaya cambiando con el tiempo,
-%comienza en 0V, luego 12V y termina en -12V 
-for i = 1:1999
-    if i < 100
-        u(i) = 0;
-    elseif i >= 100 && i <= 500
-        u(i) = vin;
-
-    elseif i > 500 && i<=1000
-        u(i) = -vin;
-    elseif i > 1000 && i <= 1500
-        u(i) = vin;
-    else
-        u(i) = -vin;
-    end
-end
-figure(2)
-plot(t,u, 'm');title('Tensión de Entrada, u_t');grid on
 % METODO DE CHEN
 % G(s) = Vc(s)/U(s)
 
@@ -66,13 +48,28 @@ plot(t,u, 'm');title('Tensión de Entrada, u_t');grid on
 % las condiciones del método (ver artículo)
 
 % 1) Elección de valores sobre el plot de Vc
-t1_v = values(1050,1); y1_v = values(1050,3); 
-t2_v = values(1150,1); y2_v = values(1150,3);
-t3_v = values(1250,1); y3_v = values(1250,3);
+% t1_v = values(1050,1); y1_v = values(1050,3); 
+% t2_v = values(1150,1); y2_v = values(1150,3);
+% t3_v = values(1250,1); y3_v = values(1250,3);
+ret     =       0.01;
+t1      =       1e-4;
+[val lugar] =min(abs(t1+ret-values(:,1))); % Busco en ret+t1
+y1_v=values(lugar,3);
+t1_v=values(lugar,1);
+[val lugar1] =min(abs(2*t1+ret-values(:,1)));
+y2_v=values(lugar1,3);
+t2_v=values(lugar1,1);
+[val lugar2] =min(abs(3*t1+ret-values(:,1)));
+y3_v=values(lugar2,3);
+t3_v=values(lugar2,1);
 
-figure(3)
-plot([t1_v t2_v t3_v],[y1_v,y2_v,y3_v],'+');hold on;
 
+
+% figure(3)
+figure(1)
+subplot(3,1,1);hold on
+plot([t1_v t2_v t3_v],[y1_v,y2_v,y3_v],'+');
+% break
 % 2) Cálculo de ganancia en estado estacionario
 % Se obtienen desde la gráfica ploteada con los datos del excel una vez que
 % la respuesta del sistema se estabiliza
@@ -95,9 +92,9 @@ k3_v = (y3_v/K_v) - 1;
 
 % B) Se despejan los valores de alfa1, alfa2 y beta
 b_v     = 4*(k1_v^3)*k3_v - 3*(k1_v^2)*(k2_v^2) - 4*(k2_v^3) + (k3_v^2) + 6*k1_v*k2_v*k3_v; %Utilizando ecuacion 23 de Chen
-alfa1_v = (k1_v*k2_v + k3_v - sqrt(b_v))/(2*(k1_v^2 + k2_v)); %Utilizando ecuacion 21 de Chen
-alfa2_v = (k1_v*k2_v + k3_v + sqrt(b_v))/(2*(k1_v^2 + k2_v)); %Utilizando ecuacion 22 de Chen
-beta_v  = (k1_v+alfa2_v)/(alfa1_v-alfa2_v);                   %Utilizando ecuacion 24 de Chen
+alfa1_v = (k1_v*k2_v + k3_v - sqrt(b_v))/(2*(k1_v^2 + k2_v)); % Utilizando ecuacion 21 de Chen
+alfa2_v = (k1_v*k2_v + k3_v + sqrt(b_v))/(2*(k1_v^2 + k2_v)); % Utilizando ecuacion 22 de Chen
+beta_v  = (k1_v+alfa2_v)/(alfa1_v-alfa2_v);                   % Utilizando ecuacion 24 de Chen
 
 % C) Cálculo de las constantes de tiempo de la FT
 T1_v = -(t1_v - 0.01)/log(alfa1_v);   %Ecuacion de Chen 25          
@@ -113,66 +110,37 @@ polo2=polos(2);
 % E) Gráfica de los resultado obtenidos
 % Se compara la señal dada por los datos de la hoja de excel con la
 % salida del sistema al hacer uso de la FT obtenida con el método de Chen
-[y_G_v,t_G_v] = lsim(G_v,u,t);
-figure(4)
+[y_G_v,t_G_v] = lsim(G_v,uSignal,time);
+figure(1)
+subplot(3,1,1)
 plot(time,vcSignal, 'k' ); grid on; hold on;
-plot(t_G_v,y_G_v,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabal de datos');
-legend({'Vc_t de excel','Vc_t método de Chen'},'Location','northeast')
+plot(t_G_v,y_G_v,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabla de datos');
+legend({'Vc_t de excel','Puntos','Vc_t método de Chen'},'Location','northeast')
 
-%ITEM 3 
-% MÉTODO DE CHEN
-% G(s) = I(s)/U(s)
-% En esta sección se aplica nuevamente el método de Chen, pero en este caso
-% se determina la función de transferencia en términos de la corriente del sistema.
-% Esto se debe a que, en el desarrollo anterior, no fue posible aislar directamente
+%ITEM 3  Acá debemos obtener la constante C
+% G(s) = C*Vc(s)/U(s)
+% Para obtener C, dVc/dt=(1/C)*i
+AVc  = values(lugar2,3)-values(lugar2-1,3); %Obtengo la variación de Vc
+At   = t3_v-values(lugar2-1,1); %Obtengo la variación de t
+i_t3 = values(lugar2,2); %Obtengo la corriente en el instante final
+C    = At*i_t3/AVc; %Calculo C
+% [val lugar2] = min(abs(3*t1+ret-values(:,1)));
+% y3_v = values(lugar2,3);
+% t3_v = values(lugar2,1);
 
-% 1) Elección de valores sobre el plot de Vc
-t1_i = values(1003,1); y1_i = values(1003,2); 
-t2_i = values(1013,1); y2_i = values(1013,2);
-t3_i = values(1023,1); y3_i = values(1023,2);
+% D) Definición de la función de transferencia derivando a la tensión y
+% multiplicando por C
+G_i = tf((C)*K_v*[1 0],conv([T1_v 1],[T2_v 1]));
 
-figure(5)
-plot([t1_i t2_i t3_i],[y1_i,y2_i,y3_i],'+');hold on;
-
-% 2) Cálculo de ganancia en estado estacionario
-% Se obtienen desde la gráfica ploteada con los datos del excel una vez que
-% la respuesta del sistema se estabiliza
-K_i = values(2400,2)/vin;
-
-% 3) Normalización de valores
-% Se dividen los valores obtenidos del gráfico por el valor de la entrada
-% dado que con el método se busca la respuesta del sistema a una entrada
-% escalón unitario
-y1_i = y1_i/vin;
-y2_i = y2_i/vin;
-y3_i = y3_i/vin;
-
-% 4) Aplicación del método
-% A) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3
-% puntos tomados en el inciso 1
-k1_i= (y1_i/K_i) - 1;
-k2_i= (y2_i/K_i) - 1;
-k3_i= (y3_i/K_i) - 1;
-
-% B) Se despejan los valores de alfa1, alfa2 y beta
-b_i     = (4*k1_i^3*k3_i) - (3*k1_i^2*k2_i^2)-(4*k2_i^3) + (k3_i^2 )+ (6*k1_i*k2_i*k3_i);
-alf1_i  = ((k1_i*k2_i) + k3_i - sqrt(b_i))/(2*(k1_i^2 + k2_i)); 
-alf2_i  = ((k1_i*k2_i) + k3_i + sqrt(b_i))/(2*(k1_i^2+k2_i)); 
-beta_i  = (k1_i + alf2_i)/(alf1_i - alf2_i);
-
-% C) Cálculo de las constantes de tiempo de la FT
-T1_i = -(t1_i-0.01)/log(alf1_i);
-T2_i = -(t1_i-0.01)/log(alf2_i);
-T3_i = (beta_i*(T1_i - T2_i)) + T1_i; 
-
-% D) Definición de la función de transferencia obtenida con el método
-G_i = tf(K_i*[T3_i 1],conv([T1_i 1],[T2_i 1]));
+% Calculo R y L
+L   = (G_i.den{1}(1))/C;
+R   = (G_i.den{1}(2))/C;
 
 % 5) Gráfica de los resultado obtenidos
 % Se compara la señal dada por los datos de la hoja de cálculo con la
 % salida del sistema al hacer uso de la FT obtenida con el método de Chen
-[y_G_i,t_G_i] = lsim(G_i,u,t);
+[y_G_i,t_G_i] = lsim(G_i,uSignal,time);
 figure(6)
 plot(time, iSignal, 'k'); grid on; hold on;
-plot(t_G_i,y_G_i,'m'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabal de datos');
+plot(t_G_i,y_G_i,'m'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabla de datos');
 legend({'I_t de excel','I_t método de Chen'},'Location','northeast')
