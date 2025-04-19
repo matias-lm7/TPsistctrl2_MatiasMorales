@@ -6,7 +6,7 @@
 %   A partir de las curvas de mediciones de las variables graficadas en la Fig. 1-3, se requiere 
 %   obtener el modelo del sistema considerando como entrada un escalón de 12V, como salida 
 %   a la velocidad angular y como perturbación al toque TL aplicado. En el archivo 
-%   Curvas_Medidas_Motor_2025v.xls están las mediciones, en la primer hoja
+%   Curvas_Medidas_Motor_2025_v.xls están las mediciones, en la primer hoja
 %   los valores y en la segunda los nombres. Se requiere obtener el modelo dinámico, para 
 %   establecer las constantes de la corriente.
 %%
