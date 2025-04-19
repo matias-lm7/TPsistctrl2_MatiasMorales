@@ -19,7 +19,7 @@ Ra  = 55.6;
 Bm  = 0; 
 Ki  = 6.49e-3; 
 Km  = 6.53e-3;     
-V   = 2;                     % tensión de alimentación para el motor
+V   = 2;                     % tensión de alimentación para el motor(preguntar profe)
 
 % MODELADO DEL MOTOR EN EL ESPACIO DE ESTADOS
 % Este modelado permite obtener las funciones de transferencia
