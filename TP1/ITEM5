@@ -80,13 +80,13 @@ plot(t, TL); grid; hold on;
 ret = 0.101;
 t1 = 0.001;
 [val lugar] =min(abs(t1+ret-values(:,1))); %Busco en ret+t1
-y1w=values(lugar,3);
+y1w=values(lugar,2);
 t1w=values(lugar,1);
 [val lugar1] =min(abs(2*t1+ret-values(:,1)));
-y2w=values(lugar1,3);
+y2w=values(lugar1,2);
 t2w=values(lugar1,1);
 [val lugar2] =min(abs(3*t1+ret-values(:,1)));
-y3w=values(lugar2,3);
+y3w=values(lugar2,2);
 t3w=values(lugar2,1);
 
 figure(3)
