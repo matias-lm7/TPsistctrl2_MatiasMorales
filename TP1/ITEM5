@@ -131,5 +131,5 @@ Gw = tf(Kw*[T3w 1],conv([T1w 1],[T2w 1]))
 [y_Gw,t_Gw] = lsim(Gw,um,t);
 figure(4)
 plot(tt, W, 'k' ); grid on; hold on;
-plot(t_Gw, y_Gw,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabla de datos');
-legend({'W_t de excel','W_t método de Chen'},'Location','northeast')
+plot(t_Gw, y_Gw,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabla de datos');   %consultar al profe porque la diferencia tan brusca 
+legend({'W_t de excel','W_t método de Chen'},'Location','northeast')                                                     %entre los graficos
