@@ -4,13 +4,14 @@
 % Actividad Práctica N1 - Caso de estudio 2
 %   Inciso 5
 %   A partir de las curvas de mediciones de las variables graficadas en la Fig. 1-3, se requiere 
-%   obtener el modelo del sistema considerando como entrada un escalón de 12V, como salida 
+%   obtener el modelo del sistema considerando como entrada un escalón de 2V, como salida 
 %   a la velocidad angular y como perturbación al toque TL aplicado. En el archivo 
 %   Curvas_Medidas_Motor_2025_v.xls están las mediciones, en la primer hoja
 %   los valores y en la segunda los nombres. Se requiere obtener el modelo dinámico, para 
 %   establecer las constantes de la corriente.
+%codigo corregido por el profe
 %%
-clear all; close all; clc;
+clear all; clc; close all;
 %% 
 % LECTURA DE DATOS
 values = xlsread('Curvas_Medidas_Motor_2025_v.xls');
@@ -36,49 +37,21 @@ plot(tt, Ia, 'b'); title('Corriente, I_a[A]'); grid on; hold on;
 subplot(4,1,4)
 plot(tt, TL_, 'b'); title('Torque [N.m]'); grid on; hold on;
 
-%%
 % PARÁMETROS DE SIMULACIÓN
 tint = 1e-7; 
 tF   = 1.5;
 V    = 2;
-t    = 0:tint:tF;                         % vector de tiempo para gráfica 
-um   = zeros(1, length(t));             % vector de acción sobre el motor
 
-%%
 % Defino el valor de tiempo a partir del cual hay tensión de alimentación
 t_init_V = 0.101;
 
-% Defino el intervalo de tiempo durante el cual existe torque
-t_init_Tor = 0.701;
-t_fin_Tor = 1;
-
-% se genera el vector de torque y el vector de tensión de alimentación
-TLref    = 0.12;
-TL       = zeros(1, length(t));
-for i=1:tF/tint
-    t_ = t(i);
-    if(t_>=t_init_V)
-        um(i) = V;
-    end
-    if ((t_init_Tor<=t_) && (t_<=t_fin_Tor))
-        TL(i) = TLref;
-    else
-        TL(i) = 0;
-    end
-end
-
-figure(2)
-subplot(2,1,1);
-plot(t, um); grid; hold on;
-subplot(2,1,2);
-plot(t, TL); grid; hold on;
 
 % MÉTODO DE CHEN
 % G(s) = wr(s)/U(s)
  
 % 1) Elección de valores sobre el plot de Wr
-ret = 0.101;
-t1 = 0.001;
+ret = 0.7;
+t1 = 0.05;
 [val lugar] =min(abs(t1+ret-values(:,1))); %Busco en ret+t1
 y1w=values(lugar,2);
 t1w=values(lugar,1);
@@ -89,176 +62,115 @@ t2w=values(lugar1,1);
 y3w=values(lugar2,2);
 t3w=values(lugar2,1);
 
-figure(3)
-plot([t1w t2w t3w],[y1w, y2w, y3w],'+');hold on;
+figure(1);subplot(4,1,1);hold on
+plot([t1w t2w t3w],[y1w, y2w, y3w],'+r');hold on;
+
+TL=.12; % TL:Amplitud del escalon de Torque de entrada
 
 % 2) Cálculo de ganancia en estado estacionario
-Kw = values(1500,2)/2;     % ganancia en ess
+
+w_001=7.635; %Omega en estado estacionario SIN TL
+w_002=3.656; %Omega en estado estacionario CON TL
+k_tl= -(w_002-w_001)/TL; % ganancia en ess %Debes considerar que pasa de un valor a otro
 
 % 3) Normalización de valores de la señal
 % Se dividen los valores obtenidos del gráfico por el valor de la entrada
 % dado que con el método se busca la respuesta del sistema a una entrada
 % escalón unitario
-y1w = y1w/V;
-y2w = y2w/V;
-y3w = y3w/V;
+yid_1=-(y1w-w_001);
+yid_2=-(y2w-w_001);
+yid_3=-(y3w-w_001);
 
 % 4) Aplicación del método
-% A) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3
-% puntos tomados en el inciso 1 de esta sección
-k1w = (y1w/Kw) - 1;  
-k2w = (y2w/Kw) - 1;   
-k3w = (y3w/Kw) - 1;
+% A) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3,
+% teniendo en cuenta el TL
+
+k1w      =      (1/TL)*yid_1/k_tl-1;
+k2w      =   (1/TL)*yid_2/k_tl-1;
+k3w      =     (1/TL)*yid_3/k_tl-1;
 
 % B) Se despejan los valores de alfa1, alfa2 y beta
-bw     = 4*(k1w^3)*k3w - 3*(k1w^2)*(k2w^2) - 4*(k2w^3) + (k3w^2) + 6*k1w*k2w*k3w;
-alfa1w = (k1w*k2w + k3w - sqrt(bw))/(2*(k1w^2 + k2w));                               % Chen ec.21
-alfa2w = (k1w*k2w + k3w + sqrt(bw))/(2*(k1w^2 + k2w));                               % Chen ec.22
+bwr     = 4*(k1w^3)*k3w - 3*(k1w^2)*(k2w^2) - 4*(k2w^3) + (k3w^2) + 6*k1w*k2w*k3w;
+alfa1w = (k1w*k2w + k3w - sqrt(bwr))/(2*(k1w^2 + k2w));                               % Chen ec.21
+alfa2w = (k1w*k2w + k3w + sqrt(bwr))/(2*(k1w^2 + k2w));                               % Chen ec.22
 betaw  = (k1w+alfa2w)/(alfa1w-alfa2w);                                               % Chen ec.23
 
 % C) Cálculo de las constantes de tiempo de la FT
 t_init_Wr = 0.101;
-T1w = -(t1w - t_init_Wr)/log(alfa1w);       % Ec. de Chen 25   
-T2w = -(t1w - t_init_Wr)/log(alfa2w);       % Ec. de Chen 25    
+T1w = -(t1)/log(alfa1w);                    % Ec. de Chen 25   
+T2w = -(t1)/log(alfa2w);                    % Ec. de Chen 25    
 T3w = (betaw*(T1w - T2w)) + T1w;            % Ec. de Chen 25
 
 % D) Definición de la función de transferencia obtenida con el método
-Gw = tf(Kw*[T3w 1],conv([T1w 1],[T2w 1]));
+Gw = tf(k_tl*[T3w 1],conv([T1w 1],[T2w 1]));
 
 % 5) Gráfica de los resultado obtenidos
 % Se compara la señal dada por los datos de la hoja de excel con la
 % salida del sistema al hacer uso de la FT obtenida con el método de Chen
-[y_Gw,t_Gw] = lsim(Gw,um,t);
-figure(4)
-plot(tt, W, 'k' ); grid on; hold on;
-plot(t_Gw, y_Gw,'r'); title('Respuesta al sistema aplicando Metodo de Chen vs. Señal graficada de la tabla de datos'); 
-legend({'W_t de excel','W_t método de Chen'},'Location','northeast')
+[y_Gw,t_Gw] = lsim(Gw,TL_,tt);
 
-%% 
 % MÉTODO DE CHEN
 % G(s) = Ia(s)/U(s)
- 
+
 % 1) Elección de valores sobre el plot de Ia
 ret = 0.101;
-t1 = 0.005;
+t1 = 0.07;
 [val lugar] =min(abs(t1+ret-values(:,1))); % Busco en ret+t1
-y1ia=values(lugar,3);
-t1ia=values(lugar,1);
+y1wr=values(lugar,2)
+t1wr=values(lugar,1);
 [val lugar1] =min(abs(2*t1+ret-values(:,1)));
-y2ia=values(lugar1,3);
-t2ia=values(lugar1,1);
+y2wr=values(lugar1,2)
+t2wr=values(lugar1,1);
 [val lugar2] =min(abs(3*t1+ret-values(:,1)));
-y3ia=values(lugar2,3);
-t3ia=values(lugar2,1);
+y3wr=values(lugar2,2)
+t3wr=values(lugar2,1);
 
-figure(5)
-plot([t1ia t2ia t3ia],[y1ia, y2ia, y3ia],'+');hold on;
+figure(1);subplot(4,1,1)
+hold on;
+plot([t1wr t2wr t3wr],[y1wr, y2wr, y3wr],'+');hold on;
 
 % 2) Cálculo de ganancia en estado estacionario
-K_ia = values(1500,3)/2;     % ganancia en ess
+K_wr = 7.624/V;     % ganancia en ess
 
 % 3) Normalización de valores de la señal
 % Se dividen los valores obtenidos del gráfico por el valor de la entrada
 % dado que con el método se busca la respuesta del sistema a una entrada
 % escalón unitario
-y1ia = y1ia/2; y2ia = y2ia/2; y3ia = y3ia/2;
+y1wr = y1wr/V;
+y2wr = y2wr/V;
+y3wr = y3wr/V;
 
 % 4) Aplicación del método
 % 4.a) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3
 % puntos tomados en el inciso 1 de esta sección
-k1ia = (y1ia/K_ia) - 1;   
-k2ia = (y2ia/K_ia) - 1;   
-k3ia = (y3ia/K_ia) - 1;   
+k1wr = (y1wr/K_wr) - 1;   
+k2wr = (y2wr/K_wr) - 1;   
+k3wr = (y3wr/K_wr) - 1;   
 
 % 4.b) Se despejan los valores de alfa1, alfa2 y beta
-bia     = 4*(k1ia^3)*k3ia - 3*(k1ia^2)*(k2ia^2) - 4*(k2ia^3) + (k3ia^2) + 6*k1ia*k2ia*k3ia; 
-alfa1ia = (k1ia*k2ia + k3ia - sqrt(bia))/(2*(k1ia^2 + k2ia));     % Chen ec.21
-alfa2ia = (k1ia*k2ia + k3ia + sqrt(bia))/(2*(k1ia^2 + k2ia));     % Chen ec.22
-betaia  = (k1ia + alfa2ia)/(alfa1ia - alfa2ia);                   % Chen ec.20 
+bwr     = 4*(k1wr^3)*k3wr - 3*(k1wr^2)*(k2wr^2) - 4*(k2wr^3) + (k3wr^2) + 6*k1wr*k2wr*k3wr; 
+alfa1wr = (k1wr*k2wr + k3wr - sqrt(bwr))/(2*(k1wr^2 + k2wr));     % Chen ec.21
+alfa2wr = (k1wr*k2wr + k3wr + sqrt(bwr))/(2*(k1wr^2 + k2wr));     % Chen ec.22
+betawr  = (k1wr + alfa2wr)/(alfa1wr - alfa2wr);                   % Chen ec.20 
 
 % 4.c) Cálculo de las constantes de tiempo de la FT
-T1ia = -(t1ia - ret)/log(alfa1ia);     % Chen ec.25         
-T2ia = -(t1ia - ret)/log(alfa2ia);     % Chen ec.25         
-T3ia =(betaia*(T1ia - T2ia)) + T1ia;   % Chen ec.25
+T1wr = -(t1)/log(alfa1wr);     % Chen ec.25         
+T2wr = -(t1)/log(alfa2wr);     % Chen ec.25         
+T3wr = (betawr*(T1wr - T2wr)) + T1wr;   % Chen ec.25
 
 % 4.4) Definición de la función de transferencia obtenida con el método
-G_ia = tf(K_ia*[T3ia 1],conv([T1ia 1],[T2ia 1]));
+G_wr = tf(K_wr*[T3wr 1],conv([T1wr 1],[T2wr 1]));
 
 % 5) Gráfica de los resultado obtenidos
 % Se compara la señal dada por los datos de la hoja de cálculo con la
 % salida del sistema al hacer uso de la FT obtenida con el método de Chen
-[y_G_ia, t_G_ia] = lsim(G_ia, um, t);
-figure(6)
-plot(tt, Ia, 'k'); grid on; hold on;
-plot(t_G_ia, y_G_ia,'r'); title('Respuesta al sistema aplicando M. de Chen vs. Señal graficada de la tabla de datos');
-legend({'Ia_t de excel','IA_t método de Chen'},'Location','northeast')
+[y_Gwr, t_Gwr] = lsim(G_wr, Vin, tt);
 
-
-%%
-% CÁLCULO DE LOS PARÁMETROS DEL MOTOR A PARTIR DE G_ia
-Ki = Gw.num{1}(3)
-J  = G_ia.num{1}(2)
-Bm = G_ia.num{1}(3)
-La = G_ia.den{1}(1)/J
-Ra = (G_ia.den{1}(2)-La*Bm)/J
-Km = (1 - Ra*Bm)/Ki
-
-%%
-% SIMULACIÓN DEL FUNCIONAMIENTO DEL MOTOR A PARTIR DE LOS PARÁMETROS 
-% OBTENIDOS
-
-% Modelado en el espacio de estados
-A = [-Ra/La -Km/La 0 ; Ki/J -Bm/J 0 ; 0 1 0];
-B = [1/La 0 ; 0 -1/J ; 0 0];
-C = [0 1 0];                               
-D = [0 0];
-
-wr      = zeros(1, length(t)); 
-ia      = zeros(1, length(t)); 
-theta   = zeros(1, length(t)); 
-
-% Condiciones iniciales
-Xop      = [0 0 0]';
-wr(1)    = 0;
-ia(1)    = 0;
-theta(1) = 0;
-    
-x = [ia(1) wr(1) theta(1)]';
-
-%%
-% SIMULACIÓN
-for ii=1:(length(t)-1)
-    xp = A*(x - Xop)+B*[um(ii), TL(ii)]';
-    x  = x + xp*tint;
-    wr(ii+1)    = C*x;
-    ia(ii+1)    = x(1);
-    theta(ii+1) = x(3);
-end
-
-
-%%
-% GRÁFICAS
-%t=0:tint:tF;
-
-figure(7)
-% Velocidad angular
-subplot(4,1,1);
-plot(tt, W, 'g' );title('Velocidad angular , \omega[rad/seg]'); grid on;hold on; 
-plot(t, wr, 'k');hold on;
-legend({'w de excel','w aproximada'},'Location','southeast')
-% Tensión de entrada
-subplot(4,1,2);
-plot(t,um,'r');title('Tension de Entrada'); grid on; hold on;
-xlabel('Tiempo [Seg.]');hold on;
-% Corriente
-subplot(4,1,3);hold on;
-plot(tt, Ia, 'g'); title('Corriente, I_a[A]'); grid on; hold on;
-plot(t,ia,'k');
-xlabel('Tiempo [Seg.]');hold on;
-legend({'ia de excel','ia aproximada'},'Location','southeast')
-% Posición
-subplot(4,1,4);
-plot(tt, TL_, 'g'); title('Torque, [N.m/V]'); grid on; hold on;
-plot(t, TL, 'k'); grid on; hold on;
-
-xlabel('Tiempo [Seg.]');hold on;
+figure(2)
+plot(t_Gw, y_Gwr - y_Gw, '.r'); hold on;
+plot(tt, W, 'b');
+title('Respuesta al sistema aplicando M. de Chen vs. Señal graficada de la tabla de datos');
+legend({'Wr_t de excel', 'Datos', 'Datos', 'Wr_t método de Chen'}, 'Location', 'northeast');
+xlabel('Tiempo (s)');
+ylabel('Velocidad angular, \omega [rad/seg]');
+grid on;
