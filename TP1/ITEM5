@@ -37,7 +37,7 @@ subplot(4,1,4)
 plot(tt, TL_, 'b'); title('Torque [N.m]'); grid on; hold on;
 
 % PARÁMETROS DE SIMULACIÓN
-% tint = 1e-7; 
+ 
 tF   = 1.5;
 V    = 2;
 
@@ -63,8 +63,9 @@ t3wr=values(lugar2,1);
 
 figure(1);subplot(4,1,1)
 hold on;
-plot([t1wr t2wr t3wr],[y1wr, y2wr, y3wr],'+');hold on;
-
+plot([t1wr t2wr t3wr],[y1wr, y2wr, y3wr],'.');hold on;
+%tomamos valores de la subida
+ 
 % 2) Cálculo de ganancia en estado estacionario
 K_wr = 7.624/V;     % ganancia en ess
 
@@ -72,16 +73,16 @@ K_wr = 7.624/V;     % ganancia en ess
 % Se dividen los valores obtenidos del gráfico por el valor de la entrada
 % dado que con el método se busca la respuesta del sistema a una entrada
 % escalón unitario
-% y1wr = y1wr/V;
-% y2wr = y2wr/V;
-% y3wr = y3wr/V;
+y1wr = y1wr/V;
+y2wr = y2wr/V;
+y3wr = y3wr/V;
 
 % 4) Aplicación del método
 % 4.a) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3
 % puntos tomados en el inciso 1 de esta sección
-k1wr = (y1wr/V)/K_wr - 1;   
-k2wr = (y2wr/V)/K_wr - 1;   
-k3wr = (y3wr/V)/K_wr - 1;   
+k1wr = (y1wr)/K_wr - 1;   
+k2wr = (y2wr)/K_wr - 1;   
+k3wr = (y3wr)/K_wr - 1;   
 
 % 4.b) Se despejan los valores de alfa1, alfa2 y beta
 bwr     = 4*(k1wr^3)*k3wr - 3*(k1wr^2)*(k2wr^2) - 4*(k2wr^3) + (k3wr^2) + 6*k1wr*k2wr*k3wr; 
@@ -127,35 +128,32 @@ TL=.12; % TL:Amplitud del escalon de Torque de entrada
 
 w_001=7.635; %Omega en estado estacionario SIN TL
 w_002=3.656; %Omega en estado estacionario CON TL
-k_tl= -(w_002-w_001)/TL; % ganancia en ess %Debes considerar que pasa de un valor a otro
+k_tl= (w_001-w_002)/TL; % ganancia en ess                                   %Debes considerar que pasa de un valor a otro
 
 % 3) Normalización de valores de la señal
-% Se dividen los valores obtenidos del gráfico por el valor de la entrada
-% dado que con el método se busca la respuesta del sistema a una entrada
-% escalón unitario
-yid_1=-(y1w-w_001);
-yid_2=-(y2w-w_001);
-yid_3=-(y3w-w_001);
+ywtl1  =  (w_001-y1w)/TL;
+ywtl2  =  (w_001-y2w)/TL;
+ywtl3  =  (w_001-y3w)/TL;
 
 % 4) Aplicación del método
 % A) Se define ki = y(ti)/K - 1 para cada ecuación resultante de los 3,
 % teniendo en cuenta el TL
 
-k1w      =      (1/TL)*yid_1/k_tl-1;
-k2w      =   (1/TL)*yid_2/k_tl-1;
-k3w      =     (1/TL)*yid_3/k_tl-1;
+k1w    =   ywtl1/k_tl-1;
+k2w    =   ywtl2/k_tl-1;
+k3w    =   ywtl3/k_tl-1;
 
 % B) Se despejan los valores de alfa1, alfa2 y beta
 bwr     = 4*(k1w^3)*k3w - 3*(k1w^2)*(k2w^2) - 4*(k2w^3) + (k3w^2) + 6*k1w*k2w*k3w;
 alfa1w = (k1w*k2w + k3w - sqrt(bwr))/(2*(k1w^2 + k2w));                               % Chen ec.21
 alfa2w = (k1w*k2w + k3w + sqrt(bwr))/(2*(k1w^2 + k2w));                               % Chen ec.22
-betaw  = (k1w+alfa2w)/(alfa1w-alfa2w);                                               % Chen ec.23
+betaw  = (k1w+alfa2w)/(alfa1w-alfa2w);                                                % Chen ec.23
 
 % C) Cálculo de las constantes de tiempo de la FT
 % t_init_Wr = 0.101;
-T1w = real(-(t1)/log(alfa1w));                    % Ec. de Chen 25   
-T2w = real(-(t1)/log(alfa2w));                    % Ec. de Chen 25    
-T3w = real((betaw*(T1w - T2w)) + T1w);            % Ec. de Chen 25
+T1w = (-(t1)/log(alfa1w));                    % Ec. de Chen 25   
+T2w = (-(t1)/log(alfa2w));                    % Ec. de Chen 25    
+T3w = ((betaw*(T1w - T2w)) + T1w);            % Ec. de Chen 25
 
 % D) Definición de la función de transferencia obtenida con el método
 Gw = tf(k_tl*[T3w 1],conv([T1wr 1],[T2wr 1]));%Mismos polos de wr/Va
@@ -174,7 +172,7 @@ Gw = tf(k_tl*[T3w 1],conv([T1wr 1],[T2wr 1]));%Mismos polos de wr/Va
 figure(1)
 subplot(4,1,1)
 hold on;
-plot(t_Gw, y_Gwr -y_Gw, '.r'); hold on;
+plot(t_Gwr, y_Gwr -y_Gw, '.r'); hold on;
 plot(tt, W, 'b');
 title('Respuesta al sistema aplicando M. de Chen vs. Señal graficada de la tabla de datos');
 legend({'Wr_t de excel', 'Datos', 'Datos', 'Wr_t método de Chen'}, 'Location', 'northeast');
@@ -184,7 +182,7 @@ grid on;
 % break
 K1_C=K_wr;K2_C=k_tl;
 
-% CÁLCULO DE LOS PARÁMETROS DEL MOTOR A PARTIR DE G_ia
+% CÁLCULO DE LOS PARÁMETROS DEL MOTOR A PARTIR DE Gw
 % Están incorrectos.
 Ra = 2/0.82 % Volt/Imax
 %De acá en adelante usen las fórmulas del Notebook
